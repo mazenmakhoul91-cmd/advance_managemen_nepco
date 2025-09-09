@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>نظام إدارة سلفة قسم صيانة انظمة التحكم (محلي)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f3f4f6; }
+        .tab-button.active { border-color: #2563eb; color: #2563eb; background-color: #dbeafe; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.5); transition: opacity 0.25s ease; }
+        .modal-content { background-color: #fefefe; margin: 3% auto; padding: 2rem; border: 1px solid #888; width: 90%; max-width: 900px; border-radius: 12px; position: relative; }
+        .close-button { color: #aaa; position: absolute; left: 1.5rem; top: 1rem; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-button:hover, .close-button:focus { color: black; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* Print styles */
+        @media print {
+            body.is-printing > *:not(.printable-area) {
+                display: none !important;
+            }
+            body.is-printing .printable-area {
+                display: block !important;
+                visibility: visible !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 1rem !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: #fff;
+            }
+            .no-print, .no-print * {
+                display: none !important;
+            }
+            .modal.printable-area .modal-content {
+                margin: 0;
+                padding: 0;
+                border: none;
+                box-shadow: none;
+                max-width: 100%;
+                width: 100%;
+            }
+            table { border-collapse: collapse; }
+            table, th, td { border: 1px solid #000 !important; }
+        }
+
+        /* header logo styling */
+        #header-logo-container { width: 160px; height: 160px; margin: 0 auto 12px; display:flex; align-items:center; justify-content:center; }
+        #header-logo-container img { max-width:100%; max-height:100%; object-fit:contain; display:block; }
+        #header-logo-container svg { width: 100%; height: 100%; display: block; }
+        /* ensure printed logo is centered */
+        @media print {
+            #header-logo-container { width: 140px; height: 140px; margin: 0 auto 12px; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto p-4 md:p-6 lg:p-8">
+        <header class="text-center mb-8 bg-white p-6 rounded-xl shadow-lg border">
+            <div id="header-logo-container" class="flex flex-col items-center justify-center mb-4" aria-hidden="false">
+                <img id="nepco-logo" src="nepco-logo.png" alt="شعار شركة الكهرباء الوطنية"
+                     onerror="window.handleLogoError && window.handleLogoError();" />
+            </div>
+
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-700">نظام إدارة سلفة قسم صيانة انظمة التحكم</h1>
+        </header>
+
+        <div class="mb-6 no-print">
+            <div class="flex flex-wrap items-center justify-center border-b border-gray-300">
+                <button class="tab-button text-lg font-semibold py-3 px-6 border-b-4 border-transparent hover:bg-gray-200" data-tab="dashboard">لوحة التحكم</button>
+                <button class="tab-button text-lg font-semibold py-3 px-6 border-b-4 border-transparent hover:bg-gray-200" data-tab="add-invoice">إضافة فاتورة</button>
+                <button class="tab-button text-lg font-semibold py-3 px-6 border-b-4 border-transparent hover:bg-gray-200" data-tab="payments">كشف المدفوعات</button>
+                <button class="tab-button text-lg font-semibold py-3 px-6 border-b-4 border-transparent hover:bg-gray-200" data-tab="materials">كشف مواد السلفة</button>
+            </div>
+        </div>
+
+        <main>
+            <div id="dashboard" class="tab-content active">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-md border col-span-1 md:col-span-2 lg:col-span-1">
+                        <h3 class="text-xl font-bold text-gray-700 mb-4">ملخص السلفة</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center group">
+                                <span class="font-semibold">قيمة السلفة:</span>
+                                <div class="flex items-center gap-2">
+                                    <span id="advance-total-display" class="font-bold text-lg text-green-600">300.000 دينار</span>
+                                    <input type="number" id="advance-total-input" class="font-bold text-lg text-green-600 w-28 border-b-2 text-center hidden" value="300">
+                                    <svg id="edit-advance-btn" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-blue-600 cursor-pointer no-print" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">المبلغ المصروف:</span>
+                                <span id="advance-spent" class="font-bold text-lg text-red-600">0.000 دينار</span>
+                            </div>
+                            <hr>
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">المبلغ المتبقي:</span>
+                                <span id="advance-remaining" class="font-bold text-xl text-blue-700">300.000 دينار</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="request-card" class="bg-white p-6 rounded-xl shadow-md border hover:shadow-lg hover:border-blue-400 transition cursor-pointer">
+                        <h3 class="text-xl font-bold text-gray-700 mb-2">طلب منح سلفة</h3>
+                        <p class="text-gray-600">تعبئة ورفع طلب منح سلفة جديد إلى الجهاز المحلي.</p>
+                    </div>
+
+                    <div id="memo-card" class="bg-white p-6 rounded-xl shadow-md border hover:shadow-lg hover:border-blue-400 transition cursor-pointer">
+                        <h3 class="text-xl font-bold text-gray-700 mb-2">مذكرة منح سلفة</h3>
+                        <p class="text-gray-600">عرض المذكرة الداخلية ورفع نسخة موقعة.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="add-invoice" class="tab-content">
+                <div class="bg-white p-8 rounded-xl shadow-lg border max-w-4xl mx-auto">
+                    <form id="invoice-form">
+                         <h2 class="text-2xl font-bold mb-6 text-center">كشف استلام المواد</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label for="company-name" class="block mb-2 font-semibold">اسم المورد</label>
+                                <input type="text" id="company-name" class="w-full px-3 py-2 border rounded-lg" required>
+                            </div>
+                            <div>
+                                <label for="invoice-number" class="block mb-2 font-semibold">رقم الفاتورة</label>
+                                <input type="text" id="invoice-number" class="w-full px-3 py-2 border rounded-lg" required>
+                            </div>
+                            <div>
+                                <label for="invoice-date" class="block mb-2 font-semibold">تاريخ الفاتورة</label>
+                                <input type="date" id="invoice-date" class="w-full px-3 py-2 border rounded-lg" required>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto mb-4">
+                            <table class="w-full min-w-[600px] text-center">
+                                <thead class="bg-gray-200">
+                                    <tr>
+                                        <th class="p-2">الرقم</th>
+                                        <th class="p-2 text-right">المواد</th>
+                                        <th class="p-2">الوحدة</th>
+                                        <th class="p-2">الكمية</th>
+                                        <th class="p-2">السعر</th>
+                                        <th class="p-2">المجموع</th>
+                                        <th class="p-2">ملاحظات</th>
+                                        <th class="p-2 no-print"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoice-items-body"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-between items-center mb-4">
+                            <button type="button" id="add-item-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 no-print">إضافة بند جديد</button>
+                            <div class="text-lg font-bold">إجمالي الفاتورة: <span id="invoice-total">0.000</span> دينار</div>
+                        </div>
+
+                        <div class="mb-6 no-print">
+                            <label for="invoice-file" class="block mb-2 font-semibold">تحميل ملف الفاتورة (اختياري)</label>
+                            <input type="file" id="invoice-file" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        </div>
+                        <div class="flex gap-4 mt-6 no-print">
+                            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">حفظ الفاتورة وترحيلها</button>
+                            <button type="button" id="print-new-invoice-btn" class="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700">طباعة</button>
+                        </div>
+                    </form>
+                    <div id="form-message" class="mt-4 text-center"></div>
+                </div>
+            </div>
+
+            <div id="payments" class="tab-content">
+                <div class="bg-white p-8 rounded-xl shadow-lg border overflow-x-auto">
+                    <div class="flex justify-between items-center mb-6 no-print">
+                        <h2 class="text-2xl font-bold">كشف المدفوعات</h2>
+                        <div class="flex gap-2">
+                           <button id="export-payments-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">تصدير إلى Excel</button>
+                            <button id="print-payments-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">طباعة</button>
+                        </div>
+                    </div>
+
+                    <div id="printable-payments-area">
+                        <h2 class="text-2xl font-bold mb-4 text-center">كشف مدفوعات سلفة قسم صيانة انظمة التحكم</h2>
+                        <table class="w-full min-w-[800px] text-center border-collapse border border-slate-500">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="p-3 border border-slate-600">رقم</th>
+                                    <th class="p-3 border border-slate-600">رقم الفاتورة</th>
+                                    <th class="p-3 border border-slate-600">المورد</th>
+                                    <th class="p-3 border border-slate-600">فلس</th>
+                                    <th class="p-3 border border-slate-600">دينار</th>
+                                    <th class="p-3 no-print border border-slate-600">ملف</th>
+                                    <th class="p-3 no-print border border-slate-600">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payments-table-body"></tbody>
+                            <tfoot class="bg-gray-200 font-bold">
+                                <tr>
+                                    <td colspan="3" class="p-3 text-right border border-slate-600">المجموع</td>
+                                    <td id="total-fils" class="p-3 border border-slate-600">000</td>
+                                    <td id="total-dinar" class="p-3 border border-slate-600">0</td>
+                                    <td id="total-amount" class="p-3 text-center border border-slate-600" colspan="2">0.000 دينار</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="materials" class="tab-content">
+                <div class="bg-white p-8 rounded-xl shadow-lg border">
+                    <h2 class="text-2xl font-bold mb-4 text-center">كشف مواد السلفة</h2>
+                    <div class="mb-6">
+                        <input type="text" id="material-search" class="w-full px-4 py-2 border rounded-lg" placeholder="ابحث عن مادة...">
+                    </div>
+                    <div class="max-h-[60vh] overflow-y-auto">
+                        <table class="w-full min-w-[600px] text-center">
+                            <thead class="bg-gray-200 sticky top-0">
+                                <tr>
+                                    <th class="p-2">المادة</th>
+                                    <th class="p-2">الوحدة</th>
+                                    <th class="p2">الرقم</th>
+                                </tr>
+                            </thead>
+                            <tbody id="materials-table-body">
+                                <tr><td class="p-2">قواطع MCB ( AC- DC)</td><td class="p-2">حبة</td><td class="p-2">1</td></tr>
+                                <tr><td class="p-2">تب + لاصق ورق + لاصق شفاف + نسلة منشار عادي + نسلة منشار جونيور + نسلة مشرط ياباني + علبة فوم للعزل + لاصق فوري مع مثبت + لاصق سيلكون + قصدير لحام </td><td class="p-2">حبة</td><td class="p-2">2</td></tr>
+                                <tr><td class="p-2">مرابط بلاستكية</td><td class="p-2">باكيت</td><td class="p-2">3</td></tr>
+                                <tr><td class="p-2">لمبة LED + لمبة نيون LED +سوكه لمبة + شصي نيون + اباريز AC كهرباء + علبة ابريز كهرباء + مقابس كهرباء متعددة المقاسات (10A – 16A ) + تحويلات ووصلات مختلفة</td><td class="p-2">حبة</td><td class="p-2">4</td></tr>
+                                <tr><td class="p-2">اسلاك توصيل كهربائية مفردة + لفة اسلاك مزدوجة 3*2.5</td><td class="p-2">لفة</td><td class="p-2">5</td></tr>
+                                <tr><td class="p-2">مرحلات وحساسات تحكم +مروحة +هيتر + ثرموستات</td><td class="p-2">حبة</td><td class="p-2">6</td></tr>
+                                <tr><td class="p-2">كيبل شبكة + راسيات RJ + كوابل USB مختلفة + كوابل شاشات مختلفة + تحويلات كوابل الشاشة المختلفة</td><td class="p-2">لفة / حبة</td><td class="p-2">7</td></tr>
+                                <tr><td class="p-2">راسية كوابل عدة مقاسات</td><td class="p-2">حبة</td><td class="p-2">8</td></tr>
+                                <tr><td class="p-2">هيت شرنك ( عازل خارجي للكوابل )</td><td class="p-2">متر</td><td class="p-2">9</td></tr>
+                                <tr><td class="p-2">براغي + صواميل + رونديلات</td><td class="p-2">بالكيلو</td><td class="p-2">10</td></tr>
+                                <tr><td class="p-2">مواسير بلاستيك + برابيش + سبويلر + مفة بلاستيك + اكواع بلاستيك + مرابط بلاستيك</td><td class="p-2">حبة / لفة / لفة</td><td class="p-2">11</td></tr>
+                                <tr><td class="p-2">ريش درل عدة قياسات + لقم براغي عدة اشكال + لقم تسنين عدة قياسات +ريشة مخروطية + هولسو عدة قياسات + كبسات مكبس</td><td class="p-2">حبة</td><td class="p-2">12</td></tr>
+                                <tr><td class="p-2">Terminal +Trunks +Stoppers + Cable Name</td><td class="p-2">حبة</td><td class="p-2">13</td></tr>
+                                <tr><td class="p-2">صيانة وتصليح كروت RTU مختلفة</td><td class="p-2">حبة</td><td class="p-2">14</td></tr>
+                                <tr><td class="p-2">صيانة عدد الية ( درل ، مكبس هيدروليك ، الخ )</td><td class="p-2">حبة</td><td class="p-2">15</td></tr>
+                                <tr><td class="p-2">صيانة أجهزة الفحص المختلفة ( فيوزات ، بطاريات مختلفة الفولتيات ، الخ )</td><td class="p-2">حبة</td><td class="p-2">16</td></tr>
+                                <tr><td class="p-2">اعمال تثقيب ولحام وخراطة للوحات وخزائن التحكم وخراطة مفاتيح</td><td class="p-2">حبة</td><td class="p-2">17</td></tr>
+                                <tr><td class="p-2">عمال (حدادة، تحميل وتنزيل، اعمال انشائية حفر ..... الخ)</td><td class="p-2">شخص</td><td class="p-2">18</td></tr>
+                                <tr><td class="p-2">ليبل ماكنة طباعة</td><td class="p-2">حبة</td><td class="p-2">19</td></tr>
+                                <tr><td class="p-2">أقلام كتابة على الكوابل</td><td class="p-2">حبة</td><td class="p-2">20</td></tr>
+                                <tr><td class="p-2">استئجار اليات ثقيلة للتحميل ونقل المواد الثقيلة (لوحات RTU، درمات كوابل التحكم ، الخ )</td><td class="p-2">عدد</td><td class="p-2">21</td></tr>
+                                <tr><td class="p-2">شوادر للتغطية اللوحات التحكم</td><td class="p-2">متر</td><td class="p-2">22</td></tr>
+                                <tr><td class="p-2">Fiber Patch Cords</td><td class="p-2">حبة</td><td class="p-2">23</td></tr>
+                                <tr><td class="p-2">Card Reader</td><td class="p-2">حبة</td><td class="p-2">24</td></tr>
+                                <tr><td class="p-2">Converter USB-RS- 232+ Converter USB-RS- 485 + Converters أنواع مختلفة</td><td class="p-2">حبة</td><td class="p-2">25</td></tr>
+                                <tr><td class="p-2">"قطع الكترونية مختلفة ( مقاومات , مواسعات , ديودات ...الخ )"</td><td class="p-2">حبة</td><td class="p-2">26</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="mt-8">
+            <div class="bg-white p-6 rounded-xl shadow-lg border">
+                <h2 class="text-2xl font-bold mb-4 text-center">سجل الملفات المرفوعة للجهاز المحلي</h2>
+                <div class="flex justify-end items-center mb-4 gap-2 no-print">
+                    <button id="export-data-btn" class="bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700">تصدير البيانات</button>
+                    <input type="file" id="import-data-input" class="hidden" accept=".json">
+                    <button id="import-data-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700">استيراد البيانات</button>
+                </div>
+                <div class="max-h-60 overflow-y-auto">
+                    <table class="w-full min-w-[600px] text-center">
+                        <thead class="bg-gray-200 sticky top-0">
+                            <tr>
+                                <th class="p-3">اسم الملف</th>
+                                <th class="p-3">النوع</th>
+                                <th class="p-3">تاريخ الرفع</th>
+                                <th class="p-3">مرتبط بـ</th>
+                                <th class="p-3">رابط الملف</th>
+                                <th class="p-3">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="uploaded-files-log"></tbody>
+                    </table>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <div id="request-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="request-modal">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">طلــب منح سلفة نثرية</h2>
+            <form id="advance-request-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="font-semibold">الدائرة الطالبة:</label>
+                        <input type="text" value="دائرة أنظمة التحكم" class="w-full border p-2 rounded-md mt-1" readonly>
+                    </div>
+                    <div>
+                        <label class="font-semibold">الجهة المنفذة:</label>
+                        <input type="text" value="قسم صيانة أنظمة التحكم" class="w-full border p-2 rounded-md mt-1" readonly>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="font-semibold">أمين السلفة:</label>
+                        <input type="text" value="مازن مروان محمود مكحول" class="w-full border p-2 rounded-md mt-1" readonly>
+                    </div>
+                    <div>
+                        <label class="font-semibold">المبلغ المطلوب (دينار):</label>
+                        <input type="number" id="request-amount" value="300" class="w-full border p-2 rounded-md mt-1" readonly>
+                    </div>
+                </div>
+                <div>
+                    <label class="font-semibold">وصف العمل:</label>
+                    <textarea class="w-full border p-2 rounded-md mt-1" readonly>سلفة صيانة وتركيبات لقسم صيانة أنظمة التحكم</textarea>
+                </div>
+                <div class="text-left">
+                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-blue-700">رفع الطلب وحفظه</button>
+                </div>
+            </form>
+            <div class="mt-6 pt-4 border-t">
+                <label class="font-semibold block mb-2">رفع نسخة موقعة من الطلب:</label>
+                <div class="flex items-center gap-4">
+                    <input type="file" id="request-file-input" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <button id="upload-request-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">رفع الملف</button>
+                </div>
+                <p id="request-upload-status" class="text-sm mt-2">جاري تهيئة النظام، يرجى الانتظار...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="memo-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="memo-modal">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">مذكّـــرة داخليـــة</h2>
+            <div class="space-y-3 text-gray-700 max-h-[60vh] overflow-y-auto pr-4">
+                <p><strong>إلى:</strong> السيد مدير دائرة أنظمة التحكم</p>
+                <p><strong>من:</strong> رئيس قسم صيانة أنظمة التحكم</p>
+                <p><strong>التاريخ:</strong> 29/1/2025</p>
+                <p><strong>الموضوع:</strong> سلفة نثرية / مؤقتة لقسم صيانة أنظمة التحكم</p>
+                <p class="leading-relaxed">إشارة الى الموضوع أعلاه، وطبيعة أعمال القسم والتي تتعلق بصيانة معدات أنظمة التحكم العاملة في أكثر من 80 محطة تحويل بالإضافة الى معدات التحكم المتصلة بمحطات التوليد والطاقة المتجددة وكذلك تركيب مشاريع محطات التحويل الجديدة وتوسعاتها وحفاظا على ديمومة عمل وأداء معدات التحكم المختلفة والمتواجدة في محطات التحكم. فانه تبرز الحاجة الى شراء مواد خاصة بالصيانة والتركيبات من السوق المحلي بالإضافة لشراء بعض الخدمات المهنية من السوق المحلي التي نحتاجها أحيانا في اعمال الصيانة عند نقل وتثبيت لوحات التحكم وهذه المواد والخدمات المشار اليها تأخذ صفة الاستعجال ويتعذر شراؤها من خلال طلبات الشراء بسبب تنوعها وقلة أسعارها وتتضمن أوجه نفقات هذه المواد كما في الجدول المرفق.</p>
+                <p class="font-bold"><strong>التنسيب:</strong> أرجو الموافقة على صرف سلفة صيانة لقسم صيانة أنظمة التحكم بقيمة سنوية 900 دينار بحيث ان لا تقل الدفعة عن 300 دينار وعلى ثلاث دفعات باسم السيد مازن مروان محمود مكحول لكي نتمكن من تنفيذ أعمال الصيانة والتركيبات المطلوبة دون تأخير أو تأثير على الخدمات المقدمة وكما تم ذكره.</p>
+            </div>
+            <div class="mt-6 pt-4 border-t">
+                <label class="font-semibold block mb-2">رفع نسخة موقعة من المذكرة:</label>
+                <div class="flex items-center gap-4">
+                    <input type="file" id="memo-file-input" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <button id="upload-memo-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">رفع الملف</button>
+                </div>
+                <p id="memo-upload-status" class="text-sm mt-2">جاري تهيئة النظام، يرجى الانتظار...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="invoice-details-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button no-print" data-modal="invoice-details-modal">&times;</span>
+            <div id="printable-area">
+                <h2 class="text-2xl font-bold mb-6 text-center">تفاصيل الفاتورة</h2>
+                <form id="edit-invoice-form">
+                    <input type="hidden" id="edit-doc-id">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label for="edit-company-name" class="block mb-2 font-semibold">اسم المورد</label>
+                            <input type="text" id="edit-company-name" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label for="edit-invoice-number" class="block mb-2 font-semibold">رقم الفاتورة</label>
+                            <input type="text" id="edit-invoice-number" class="w-full px-3 py-2 border rounded-lg" readonly>
+                        </div>
+                        <div>
+                            <label for="edit-invoice-date" class="block mb-2 font-semibold">تاريخ الفاتورة</label>
+                            <input type="date" id="edit-invoice-date" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto mb-4">
+                        <table class="w-full min-w-[600px] text-center">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="p-2">الرقم</th>
+                                    <th class="p-2 text-right">المواد</th>
+                                    <th class="p-2">الوحدة</th>
+                                    <th class="p-2">الكمية</th>
+                                    <th class="p-2">السعر</th>
+                                    <th class="p-2">المجموع</th>
+                                    <th class="p-2 no-print"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="edit-invoice-items-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex justify-between items-center mt-4">
+                        <button type="button" id="edit-add-item-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 no-print">إضافة بند جديد</button>
+                        <div class="text-lg font-bold">إجمالي الفاتورة: <span id="edit-invoice-total">0.000</span> دينار</div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="flex justify-end gap-4 mt-6 no-print">
+                <button type="button" id="print-invoice-btn" class="bg-blue-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-blue-700">طباعة الفاتورة</button>
+                <button type="button" id="save-invoice-changes-btn" class="bg-green-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-green-700">حفظ التعديلات</button>
+                <button type="button" id="delete-invoice-btn" class="bg-red-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-red-700">حذف الفاتورة</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content max-w-sm text-center">
+            <h3 class="text-xl font-bold mb-4">تأكيد الحذف</h3>
+            <p>هل أنت متأكد من رغبتك في حذف هذه الفاتورة؟</p>
+            <div class="flex justify-center gap-4 mt-6">
+                <button id="confirm-delete-btn" class="bg-red-600 text-white py-2 px-5 rounded-lg">حذف</button>
+                <button id="cancel-delete-btn" class="bg-gray-300 text-gray-800 py-2 px-5 rounded-lg">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /****************************************************************
+         * Logo fallback handler
+         * If nepco-logo.png is missing or fails to load, replace the
+         * broken image with an inline SVG fallback so something always appears.
+         ****************************************************************/
+        window.handleLogoError = function() {
+            try {
+                const container = document.getElementById('header-logo-container');
+                if (!container) return;
+                // hide broken image if present
+                const img = document.getElementById('nepco-logo');
+                if (img) img.style.display = 'none';
+
+                // if we've already inserted fallback, don't duplicate
+                if (document.getElementById('nepco-logo-fallback')) return;
+
+                // simple stylized SVG fallback (circle + lightning)
+                const svgNS = "http://www.w3.org/2000/svg";
+                const svg = document.createElementNS(svgNS, "svg");
+                svg.setAttribute('id', 'nepco-logo-fallback');
+                svg.setAttribute('width', '160');
+                svg.setAttribute('height', '160');
+                svg.setAttribute('viewBox', '0 0 220 220');
+                svg.setAttribute('aria-label', 'شعار الشركة');
+                svg.style.display = 'block';
+                svg.style.margin = '0 auto';
+                svg.innerHTML = `
+                    <defs>
+                        <linearGradient id="g1_fb" x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stop-color="#ffffff"/>
+                            <stop offset="100%" stop-color="#efefef"/>
+                        </linearGradient>
+                    </defs>
+                    <circle cx="110" cy="110" r="100" fill="url(#g1_fb)" stroke="#333" stroke-width="2"></circle>
+                    <polygon points="118,34 96,110 118,110 100,168 156,88 136,88 154,34" fill="#F6D32D" stroke="#D4AF00" stroke-width="2"></polygon>
+                    <text x="110" y="172" font-size="12" text-anchor="middle" fill="#000">NEPCO</text>
+                `;
+                container.appendChild(svg);
+            } catch (err) {
+                console.warn('خطأ أثناء وضع بديل الشعار:', err);
+            }
+        };
+
+        /****************************************************************
+         * Application logic (local storage, invoices, printing etc.)
+         * This is the same logic as previous integrated version, with
+         * robust printing that includes the logo (image or fallback).
+         ****************************************************************/
+
+        // Local storage keys and default data
+        const LS_KEY = 'advanceAppData_v1';
+        const DEFAULT = {
+            advance: { total: 300, spent: 0 },
+            invoices: [],
+            files: []
+        };
+
+        function loadAppData() {
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                if (!raw) {
+                    localStorage.setItem(LS_KEY, JSON.stringify(DEFAULT));
+                    return JSON.parse(JSON.stringify(DEFAULT));
+                }
+                return JSON.parse(raw);
+            } catch (e) {
+                console.error('Error loading data', e);
+                localStorage.setItem(LS_KEY, JSON.stringify(DEFAULT));
+                return JSON.parse(JSON.stringify(DEFAULT));
+            }
+        }
+        function saveAppData() {
+            try {
+                localStorage.setItem(LS_KEY, JSON.stringify(appData));
+            } catch (e) {
+                console.error('Error saving data', e);
+            }
+        }
+
+        // app state
+        let appData = loadAppData();
+        let currentInvoiceDocId = null;
+
+        // UI elements
+        const tabs = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const advanceTotalDisplay = document.getElementById('advance-total-display');
+        const advanceTotalInput = document.getElementById('advance-total-input');
+        const editAdvanceBtn = document.getElementById('edit-advance-btn');
+        const advanceSpent = document.getElementById('advance-spent');
+        const advanceRemaining = document.getElementById('advance-remaining');
+
+        const invoiceForm = document.getElementById('invoice-form');
+        const invoiceItemsBody = document.getElementById('invoice-items-body');
+        const invoiceTotalSpan = document.getElementById('invoice-total');
+        const addItemBtn = document.getElementById('add-item-btn');
+
+        const paymentsTableBody = document.getElementById('payments-table-body');
+        const totalFilsSpan = document.getElementById('total-fils');
+        const totalDinarSpan = document.getElementById('total-dinar');
+        const totalAmountSpan = document.getElementById('total-amount');
+
+        const requestCard = document.getElementById('request-card');
+        const memoCard = document.getElementById('memo-card');
+        const requestModal = document.getElementById('request-modal');
+        const memoModal = document.getElementById('memo-modal');
+        const invoiceDetailsModal = document.getElementById('invoice-details-modal');
+        const confirmModal = document.getElementById('confirm-modal');
+
+        const requestFileInput = document.getElementById('request-file-input');
+        const uploadRequestBtn = document.getElementById('upload-request-btn');
+        const requestUploadStatus = document.getElementById('request-upload-status');
+
+        const memoFileInput = document.getElementById('memo-file-input');
+        const uploadMemoBtn = document.getElementById('upload-memo-btn');
+        const memoUploadStatus = document.getElementById('memo-upload-status');
+
+        const uploadedFilesLog = document.getElementById('uploaded-files-log');
+
+        const editInvoiceForm = document.getElementById('edit-invoice-form');
+        const editInvoiceItemsBody = document.getElementById('edit-invoice-items-body');
+        const editInvoiceTotal = document.getElementById('edit-invoice-total');
+        const editAddItemBtn = document.getElementById('edit-add-item-btn');
+        const saveInvoiceChangesBtn = document.getElementById('save-invoice-changes-btn');
+        const deleteInvoiceBtn = document.getElementById('delete-invoice-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const exportPaymentsBtn = document.getElementById('export-payments-btn');
+        const printPaymentsBtn = document.getElementById('print-payments-btn');
+        const printInvoiceBtn = document.getElementById('print-invoice-btn');
+        const formMessage = document.getElementById('form-message');
+        const printNewInvoiceBtn = document.getElementById('print-new-invoice-btn');
+        const exportDataBtn = document.getElementById('export-data-btn');
+        const importDataBtn = document.getElementById('import-data-btn');
+        const importDataInput = document.getElementById('import-data-input');
+
+        // tab handling
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+            });
+        });
+
+        // modal open/close
+        function openModal(modal) {
+            modal.style.opacity = '0';
+            modal.style.display = 'block';
+            setTimeout(() => { modal.style.opacity = '1'; }, 10);
+        }
+        function closeModal(modal) {
+            modal.style.opacity = '0';
+            setTimeout(() => { modal.style.display = 'none'; }, 250);
+        }
+        document.querySelectorAll('.close-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-modal');
+                const modal = document.getElementById(id);
+                if (modal) closeModal(modal);
+            });
+        });
+
+        requestCard.addEventListener('click', () => openModal(requestModal));
+        memoCard.addEventListener('click', () => openModal(memoModal));
+
+        // update dashboard summary
+        function updateDashboard() {
+            const spentTotal = appData.invoices.reduce((s, inv) => s + (inv.total || 0), 0);
+            const remaining = (appData.advance?.total || 0) - spentTotal;
+            advanceTotalDisplay.textContent = `${(appData.advance?.total || 0).toFixed(3)} دينار`;
+            advanceTotalInput.value = appData.advance?.total || 0;
+            advanceSpent.textContent = `${spentTotal.toFixed(3)} دينار`;
+            advanceRemaining.textContent = `${remaining.toFixed(3)} دينار`;
+        }
+
+        // invoices table
+        function updatePaymentsTable() {
+            let totalAmount = 0;
+            let html = '';
+            appData.invoices.sort((a, b) => b.timestamp - a.timestamp); // sort by newest first
+            appData.invoices.forEach((invoice, index) => {
+                totalAmount += invoice.total || 0;
+                const [dinar, fils] = String((invoice.total || 0).toFixed(3)).split('.');
+                html += `
+                    <tr class="hover:bg-gray-50 cursor-pointer border border-slate-600" data-id="${invoice.id}">
+                        <td class="p-3 border border-slate-600">${index + 1}</td>
+                        <td class="p-3 border border-slate-600">${invoice.invoiceNumber || ''}</td>
+                        <td class="p-3 border border-slate-600">${invoice.companyName || ''}</td>
+                        <td class="p-3 border border-slate-600">${fils}</td>
+                        <td class="p-3 border border-slate-600">${dinar}</td>
+                        <td class="p-3 no-print border border-slate-600">
+                            ${invoice.fileUrl ? `<a href="${invoice.fileUrl}" download="${invoice.fileName || 'file'}" class="text-blue-500 hover:underline">تحميل</a>` : '-'}
+                        </td>
+                        <td class="p-3 no-print border border-slate-600">
+                            <button class="view-invoice-btn bg-blue-500 text-white p-2 rounded-lg" data-id="${invoice.id}">عرض</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            paymentsTableBody.innerHTML = html;
+            const [totalDinar, totalFils] = String(totalAmount.toFixed(3)).split('.');
+            totalFilsSpan.textContent = totalFils;
+            totalDinarSpan.textContent = totalDinar;
+            totalAmountSpan.textContent = `${totalAmount.toFixed(3)} دينار`;
+
+            document.querySelectorAll('.view-invoice-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = btn.closest('tr').getAttribute('data-id');
+                    const invoice = appData.invoices.find(i => i.id === id);
+                    if (invoice) displayInvoiceDetails(invoice);
+                });
+            });
+        }
+
+        // التغيير: تمت إضافة وظيفة حذف الملف
+        function deleteUploadedFile(timestamp) {
+            appData.files = appData.files.filter(file => file.timestamp !== timestamp);
+            saveAppData();
+            updateUploadedFilesLog();
+        }
+
+        // uploaded files log
+        function updateUploadedFilesLog() {
+            const files = appData.files || [];
+            let html = '';
+            files.sort((a, b) => b.timestamp - a.timestamp);
+            files.forEach(file => {
+                const date = new Date(file.timestamp).toLocaleDateString('ar-JO', { year: 'numeric', month: 'long', day: 'numeric' });
+                // التغيير: تمت إضافة زر الحذف بجانب رابط التحميل
+                html += `
+                    <tr>
+                        <td class="p-3">${file.name}</td>
+                        <td class="p-3">${file.type}</td>
+                        <td class="p-3">${date}</td>
+                        <td class="p-3">${file.relatedTo}</td>
+                        <td class="p-3">
+                            ${file.base64 ? `<a href="${file.base64}" download="${file.name}" class="text-blue-500 hover:underline">تحميل</a>` : '-'}
+                        </td>
+                        <td class="p-3">
+                             <button class="delete-file-btn text-red-600 hover:text-red-800 font-semibold" data-timestamp="${file.timestamp}">حذف</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            uploadedFilesLog.innerHTML = html;
+
+            // التغيير: ربط الأحداث بأزرار الحذف الجديدة
+            document.querySelectorAll('.delete-file-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const timestamp = parseInt(e.target.getAttribute('data-timestamp'));
+                    if (confirm('هل أنت متأكد من رغبتك في حذف هذا الملف نهائياً؟')) {
+                        deleteUploadedFile(timestamp);
+                    }
+                });
+            });
+        }
+
+        // invoice row helpers
+        function addInvoiceItemRow(tbody, item = {}, isEditable = true) {
+            const rowCount = tbody.children.length + 1;
+            const row = document.createElement('tr');
+            const removeBtnHtml = isEditable ? `<td class="p-2 no-print"><button type="button" class="remove-item-btn text-red-500 hover:text-red-700">حذف</button></td>` : '<td class="p-2 no-print"></td>';
+            row.innerHTML = `
+                <td class="p-2">${rowCount}</td>
+                <td class="p-2"><input type="text" value="${escapeHtml(item.name || '')}" class="w-full px-2 py-1 border rounded-md item-name" required ${!isEditable ? 'readonly' : ''}></td>
+                <td class="p-2"><input type="text" value="${escapeHtml(item.unit || '')}" class="w-full px-2 py-1 border rounded-md item-unit" ${!isEditable ? 'readonly' : ''}></td>
+                <td class="p-2"><input type="number" value="${item.quantity || 1}" class="w-20 px-2 py-1 border rounded-md text-center item-qty" min="1" required ${!isEditable ? 'readonly' : ''}></td>
+                <td class="p-2"><input type="number" value="${item.price || 0}" step="0.001" class="w-20 px-2 py-1 border rounded-md text-center item-price" min="0" required ${!isEditable ? 'readonly' : ''}></td>
+                <td class="p-2"><span class="item-total">${((item.quantity || 0) * (item.price || 0)).toFixed(3)}</span></td>
+                <td class="p-2"><input type="text" value="${escapeHtml(item.notes || '')}" class="w-full px-2 py-1 border rounded-md item-notes" ${!isEditable ? 'readonly' : ''}></td>
+                ${removeBtnHtml}
+            `;
+            tbody.appendChild(row);
+
+            if (isEditable) {
+                row.querySelector('.remove-item-btn').addEventListener('click', () => {
+                    row.remove();
+                    updateTotals();
+                });
+                row.querySelector('.item-qty').addEventListener('input', updateTotals);
+                row.querySelector('.item-price').addEventListener('input', updateTotals);
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+        }
+
+        function calculateInvoiceTotal(items) {
+            return items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0)), 0);
+        }
+
+        function updateTotals() { // For add-invoice form
+             let total = 0;
+            const rows = Array.from(invoiceItemsBody.querySelectorAll('tr'));
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const itemTotal = qty * price;
+                row.querySelector('.item-total').textContent = itemTotal.toFixed(3);
+                total += itemTotal;
+            });
+            invoiceTotalSpan.textContent = total.toFixed(3);
+        }
+
+        // invoice form submit (save locally)
+        invoiceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const items = Array.from(invoiceItemsBody.querySelectorAll('tr')).map(row => ({
+                name: row.querySelector('.item-name').value,
+                unit: row.querySelector('.item-unit').value,
+                quantity: Number(row.querySelector('.item-qty').value),
+                price: Number(row.querySelector('.item-price').value),
+                notes: row.querySelector('.item-notes').value
+            }));
+            const invoice = {
+                id: 'inv-' + Date.now(),
+                companyName: document.getElementById('company-name').value,
+                invoiceNumber: document.getElementById('invoice-number').value,
+                invoiceDate: document.getElementById('invoice-date').value,
+                items,
+                total: calculateInvoiceTotal(items),
+                timestamp: Date.now()
+            };
+
+            const file = document.getElementById('invoice-file').files[0];
+            if (file) {
+                const base64 = await fileToBase64(file);
+                invoice.fileName = file.name;
+                invoice.fileUrl = base64;
+                appData.files.push({
+                    name: file.name,
+                    type: 'invoice',
+                    relatedTo: invoice.invoiceNumber,
+                    timestamp: Date.now(),
+                    base64
+                });
+            }
+
+            appData.invoices.push(invoice);
+            saveAppData();
+            updatePaymentsTable();
+            updateUploadedFilesLog();
+            updateDashboard();
+
+            formMessage.textContent = 'تم حفظ الفاتورة بنجاح!';
+            formMessage.classList.add('text-green-600');
+            setTimeout(() => {
+                formMessage.textContent = '';
+                formMessage.classList.remove('text-green-600');
+            }, 3000);
+
+            invoiceForm.reset();
+            invoiceItemsBody.innerHTML = '';
+            invoiceTotalSpan.textContent = '0.000';
+        });
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // request form submit (save request metadata locally)
+        document.getElementById('advance-request-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const amount = Number(document.getElementById('request-amount').value || 0);
+            const req = {
+                id: 'req-' + Date.now(),
+                type: 'request-form',
+                amount,
+                relatedTo: 'طلب سلفة',
+                timestamp: Date.now()
+            };
+            appData.files.push({
+                name: `طلب-${new Date().toISOString().slice(0,10)}.json`,
+                type: 'request-form',
+                relatedTo: 'طلب سلفة',
+                timestamp: Date.now(),
+                base64: 'data:application/json;base64,' + btoa(JSON.stringify(req))
+            });
+            saveAppData();
+            updateUploadedFilesLog();
+            requestUploadStatus.textContent = 'تم رفع وحفظ الطلب محلياً.';
+            setTimeout(() => closeModal(requestModal), 1500);
+        });
+
+        // request/memo upload handling
+        uploadRequestBtn.addEventListener('click', async () => {
+            const file = requestFileInput.files[0];
+            if (!file) {
+                requestUploadStatus.textContent = 'يرجى اختيار ملف أولاً.';
+                return;
+            }
+            uploadRequestBtn.disabled = true;
+            requestUploadStatus.textContent = 'جاري التحميل...';
+            try {
+                const base64 = await fileToBase64(file);
+                appData.files.push({
+                    name: file.name,
+                    type: 'request',
+                    relatedTo: 'طلب سلفة',
+                    timestamp: Date.now(),
+                    base64
+                });
+                saveAppData();
+                updateUploadedFilesLog();
+                requestUploadStatus.textContent = 'تم تحميل الطلب بنجاح!';
+            } catch (err) {
+                console.error(err);
+                requestUploadStatus.textContent = 'فشل التحميل. حاول مرة أخرى.';
+            } finally {
+                uploadRequestBtn.disabled = false;
+            }
+        });
+
+        uploadMemoBtn.addEventListener('click', async () => {
+            const file = memoFileInput.files[0];
+            if (!file) {
+                memoUploadStatus.textContent = 'يرجى اختيار ملف أولاً.';
+                return;
+            }
+            uploadMemoBtn.disabled = true;
+            memoUploadStatus.textContent = 'جاري التحميل...';
+            try {
+                const base64 = await fileToBase64(file);
+                appData.files.push({
+                    name: file.name,
+                    type: 'memo',
+                    relatedTo: 'مذكرة داخلية',
+                    timestamp: Date.now(),
+                    base64
+                });
+                saveAppData();
+                updateUploadedFilesLog();
+                memoUploadStatus.textContent = 'تم تحميل المذكرة بنجاح!';
+            } catch (err) {
+                console.error(err);
+                memoUploadStatus.textContent = 'فشل التحميل. حاول مرة أخرى.';
+            } finally {
+                uploadMemoBtn.disabled = false;
+            }
+        });
+
+        // materials search
+        document.getElementById('material-search').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('#materials-table-body tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+            });
+        });
+
+        // display invoice details in modal (edit/delete)
+        function displayInvoiceDetails(invoice) {
+            currentInvoiceDocId = invoice.id;
+            document.getElementById('edit-company-name').value = invoice.companyName || '';
+            document.getElementById('edit-invoice-number').value = invoice.invoiceNumber || '';
+            document.getElementById('edit-invoice-date').value = invoice.invoiceDate || '';
+
+            editInvoiceItemsBody.innerHTML = '';
+            invoice.items.forEach(item => addInvoiceItemRow(editInvoiceItemsBody, item, true));
+
+            const updateEditTotal = () => {
+                const items = Array.from(editInvoiceItemsBody.querySelectorAll('tr')).map(row => ({
+                    quantity: Number(row.querySelector('.item-qty').value),
+                    price: Number(row.querySelector('.item-price').value)
+                }));
+                editInvoiceTotal.textContent = calculateInvoiceTotal(items).toFixed(3);
+            };
+            const attachEditListeners = () => {
+                editInvoiceItemsBody.querySelectorAll('.item-qty, .item-price').forEach(inp => inp.addEventListener('input', updateEditTotal));
+            };
+            attachEditListeners();
+            editAddItemBtn.onclick = () => {
+                addInvoiceItemRow(editInvoiceItemsBody);
+                attachEditListeners();
+                updateEditTotal();
+            };
+            updateEditTotal();
+
+            openModal(invoiceDetailsModal);
+        }
+
+        // save invoice edits
+        saveInvoiceChangesBtn.addEventListener('click', async () => {
+            if (!currentInvoiceDocId) return;
+            const items = Array.from(editInvoiceItemsBody.querySelectorAll('tr')).map(row => ({
+                name: row.querySelector('.item-name').value,
+                unit: row.querySelector('.item-unit').value,
+                quantity: Number(row.querySelector('.item-qty').value),
+                price: Number(row.querySelector('.item-price').value),
+                notes: row.querySelector('.item-notes')?.value || ''
+            }));
+            const idx = appData.invoices.findIndex(inv => inv.id === currentInvoiceDocId);
+            if (idx === -1) { alert('لم نتمكن من العثور على الفاتورة'); return; }
+            appData.invoices[idx].companyName = document.getElementById('edit-company-name').value;
+            appData.invoices[idx].invoiceDate = document.getElementById('edit-invoice-date').value;
+            appData.invoices[idx].items = items;
+            appData.invoices[idx].total = calculateInvoiceTotal(items);
+            saveAppData();
+            updatePaymentsTable();
+            updateDashboard();
+            alert('تم حفظ التعديلات بنجاح!');
+            closeModal(invoiceDetailsModal);
+        });
+
+        // delete invoice
+        deleteInvoiceBtn.addEventListener('click', () => {
+            openModal(confirmModal);
+        });
+        confirmDeleteBtn.addEventListener('click', () => {
+            if (!currentInvoiceDocId) return;
+            appData.invoices = appData.invoices.filter(inv => inv.id !== currentInvoiceDocId);
+            saveAppData();
+            updatePaymentsTable();
+            updateDashboard();
+            closeModal(confirmModal);
+            closeModal(invoiceDetailsModal);
+        });
+        cancelDeleteBtn.addEventListener('click', () => {
+            closeModal(confirmModal);
+        });
+
+        // edit-advance toggle
+        editAdvanceBtn.addEventListener('click', () => {
+            if (!advanceTotalInput.classList.contains('hidden')) {
+                const newTotal = parseFloat(advanceTotalInput.value);
+                if (!isNaN(newTotal) && newTotal >= 0) {
+                    appData.advance.total = newTotal;
+                    saveAppData();
+                    updateDashboard();
+                }
+                advanceTotalDisplay.classList.remove('hidden');
+                advanceTotalInput.classList.add('hidden');
+            } else {
+                advanceTotalDisplay.classList.add('hidden');
+                advanceTotalInput.classList.remove('hidden');
+                advanceTotalInput.focus();
+            }
+        });
+
+        // Export payments to Excel
+        exportPaymentsBtn.addEventListener('click', () => {
+            let csv = '\uFEFFرقم,رقم الفاتورة,المورد,فلس,دينار\n'; // BOM for UTF-8 Excel support
+            appData.invoices.forEach((invoice, idx) => {
+                const [dinar, fils] = String((invoice.total || 0).toFixed(3)).split('.');
+                csv += `${idx + 1},"${escapeCsv(invoice.invoiceNumber || '')}","${escapeCsv(invoice.companyName || '')}",${fils},${dinar}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'كشف_المدفوعات.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+        function escapeCsv(s) {
+            return String(s).replace(/"/g, '""');
+        }
+
+        // Robust print helper:
+        function cloneWithValues(el) {
+            const clone = el.cloneNode(true);
+            const origInputs = el.querySelectorAll('input, textarea, select');
+            const cloneInputs = clone.querySelectorAll('input, textarea, select');
+            origInputs.forEach((input, i) => {
+                const c = cloneInputs[i];
+                if (!c) return;
+                if (input instanceof HTMLInputElement) {
+                    if (input.type === 'checkbox' || input.type === 'radio') {
+                        c.checked = input.checked;
+                    } else {
+                        c.value = input.value;
+                    }
+                    c.setAttribute('readonly', 'readonly');
+                } else if (input instanceof HTMLTextAreaElement) {
+                    c.value = input.value;
+                    c.setAttribute('readonly', 'readonly');
+                } else if (input instanceof HTMLSelectElement) {
+                    c.value = input.value;
+                    c.setAttribute('disabled', 'disabled');
+                }
+            });
+            clone.querySelectorAll('.no-print, button, input[type="file"], .remove-item-btn').forEach(n => n.remove());
+            return clone;
+        }
+
+        function performPrint(elementId) {
+            const target = document.getElementById(elementId);
+            if (!target) {
+                alert('تعذر العثور على العنصر المطلوب للطباعة: ' + elementId);
+                return;
+            }
+
+            // create print container
+            const printContainer = document.createElement('div');
+            printContainer.className = 'printable-area';
+            const cloned = cloneWithValues(target);
+
+            // add logo (image or fallback) to printed copy
+            const headerImg = document.getElementById('nepco-logo');
+            const fallback = document.getElementById('nepco-logo-fallback');
+            if (headerImg && headerImg.src && headerImg.complete && headerImg.naturalWidth !== 0 && headerImg.style.display !== 'none') {
+                const logoImg = document.createElement('img');
+                logoImg.src = headerImg.src;
+                logoImg.alt = headerImg.alt || '';
+                logoImg.style.width = '120px';
+                logoImg.style.height = 'auto';
+                logoImg.style.display = 'block';
+                logoImg.style.margin = '0 auto 12px';
+                printContainer.appendChild(logoImg);
+            } else if (fallback) {
+                const clonedFallback = fallback.cloneNode(true);
+                clonedFallback.style.display = 'block';
+                clonedFallback.style.margin = '0 auto 12px';
+                printContainer.appendChild(clonedFallback);
+            }
+
+            printContainer.appendChild(cloned);
+            document.body.classList.add('is-printing');
+            document.body.appendChild(printContainer);
+
+            const cleanup = () => {
+                document.body.classList.remove('is-printing');
+                if (printContainer && printContainer.parentNode) printContainer.parentNode.removeChild(printContainer);
+                window.removeEventListener('afterprint', cleanup);
+                setTimeout(() => {
+                    if (printContainer && printContainer.parentNode) printContainer.parentNode.removeChild(printContainer);
+                    document.body.classList.remove('is-printing');
+                }, 1000);
+            };
+
+            window.addEventListener('afterprint', cleanup);
+            setTimeout(() => window.print(), 50);
+        }
+
+        // Import/Export Logic
+        exportDataBtn.addEventListener('click', () => {
+            try {
+                const dataStr = JSON.stringify(appData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `advance_data_backup_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('Error exporting data', e);
+                alert('حدث خطأ أثناء تصدير البيانات.');
+            }
+        });
+
+        importDataBtn.addEventListener('click', () => {
+            importDataInput.click();
+        });
+
+        importDataInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (importedData && typeof importedData.advance === 'object' && Array.isArray(importedData.invoices)) {
+                        if (confirm('هل أنت متأكد من رغبتك في استيراد البيانات؟ سيتم الكتابة فوق جميع البيانات الحالية.')) {
+                            appData = importedData;
+                            saveAppData();
+                            updateDashboard();
+                            updatePaymentsTable();
+                            updateUploadedFilesLog();
+                            alert('تم استيراد البيانات بنجاح!');
+                        }
+                    } else {
+                        throw new Error('Invalid data structure.');
+                    }
+                } catch (err) {
+                    console.error('Error importing data:', err);
+                    alert('فشل استيراد البيانات. يرجى التأكد من أن الملف صحيح.');
+                } finally {
+                    importDataInput.value = '';
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // helpers
+        addItemBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            addInvoiceItemRow(invoiceItemsBody);
+        });
+
+        // bind print buttons and other button handlers after DOM ready
+        window.addEventListener('DOMContentLoaded', () => {
+            // print buttons
+            const pPayments = document.getElementById('print-payments-btn');
+            if (pPayments) pPayments.addEventListener('click', () => performPrint('printable-payments-area'));
+
+            const pInvoice = document.getElementById('print-invoice-btn');
+            if (pInvoice) pInvoice.addEventListener('click', () => performPrint('printable-area'));
+
+            const pNewInvoice = document.getElementById('print-new-invoice-btn');
+            if (pNewInvoice) pNewInvoice.addEventListener('click', () => performPrint('invoice-form'));
+
+            // initialize UI and data
+            updateDashboard();
+            updatePaymentsTable();
+            updateUploadedFilesLog();
+            if (tabs[0]) tabs[0].click();
+            requestUploadStatus.textContent = 'النظام جاهز لتحميل الملفات.';
+            memoUploadStatus.textContent = 'النظام جاهز لتحميل الملفات.';
+
+            // If the image failed to load, insert fallback
+            const logoImg = document.getElementById('nepco-logo');
+            if (logoImg && (!logoImg.complete || logoImg.naturalWidth === 0)) {
+                window.handleLogoError();
+            }
+        });
+
+    </script>
+</body>
+</html>
