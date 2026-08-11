@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام التحقق من فواتير الكهرباء</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1>نظام التحقق من فواتير الكهرباء</h1>
+                <p>شركة الكهرباء الأردنية - المساهمة العامة المحدودة - عمّان</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="upload-section">
+                <div class="upload-card">
+                    <h2>خطوة 1: تحميل ملف البيانات (Excel)</h2>
+                    <div class="upload-area" id="excelDropArea">
+                        <div class="upload-icon">📊</div>
+                        <p>اسحب ملف Excel هنا أو انقر للاختيار</p>
+                        <small>(.xlsx, .xls)</small>
+                    </div>
+                    <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;">
+                </div>
+
+                <div class="upload-card">
+                    <h2>خطوة 2: تحميل صور الفواتير</h2>
+                    <div class="upload-area" id="imagesDropArea">
+                        <div class="upload-icon">📸</div>
+                        <p>اسحب الصور هنا أو انقر للاختيار</p>
+                        <small>(.jpg, .png, .jpeg)</small>
+                    </div>
+                    <input type="file" id="billImages" accept="image/*" multiple style="display: none;">
+                    <div class="file-list" id="fileList"></div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <button id="processBtn" class="btn btn-primary" disabled>
+                    <span>🔍 تحليل الفواتير</span>
+                </button>
+                <button id="exportBtn" class="btn btn-secondary" disabled>
+                    <span>💾 تصدير النتائج</span>
+                </button>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <h2>نتائج المطابقة</h2>
+                <div class="stats">
+                    <div class="stat-card success">
+                        <div class="stat-number" id="successCount">0</div>
+                        <div class="stat-label">فواتير صحيحة ✓</div>
+                    </div>
+                    <div class="stat-card error">
+                        <div class="stat-number" id="errorCount">0</div>
+                        <div class="stat-label">فواتير بها أخطاء ✗</div>
+                    </div>
+                    <div class="stat-card pending">
+                        <div class="stat-number" id="pendingCount">0</div>
+                        <div class="stat-label">لم تتم معالجتها</div>
+                    </div>
+                </div>
+
+                <div class="results-table-container">
+                    <table class="results-table" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>اسم المشترك</th>
+                                <th>رقم الملف</th>
+                                <th>رقم الاشتراك</th>
+                                <th>قيمة الاستهلاك</th>
+                                <th>رقم الفاتورة</th>
+                                <th>حالة المطابقة</th>
+                                <th>التفاصيل</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="preview-section" id="previewSection" style="display: none;">
+                <h2>معاينة البيانات المرفوعة</h2>
+                
+                <div class="preview-tabs">
+                    <button class="tab-btn active" data-tab="excel-preview">بيانات Excel</button>
+                    <button class="tab-btn" data-tab="images-preview">الصور المرفوعة</button>
+                </div>
+
+                <div id="excel-preview" class="tab-content active">
+                    <div class="excel-preview-table">
+                        <table id="excelDataTable">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="images-preview" class="tab-content">
+                    <div class="images-grid" id="imagesGrid">
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2026 نظام التحقق من فواتير الكهرباء | جميع الحقوق محفوظة</p>
+        </footer>
+    </div>
+
+    <!-- Modal for detailed bill view -->
+    <div id="billModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="modal-body">
+                <div class="modal-image">
+                    <img id="modalImage" src="" alt="صورة الفاتورة">
+                </div>
+                <div class="modal-details">
+                    <h3 id="modalTitle"></h3>
+                    <div class="details-list" id="detailsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="ocr.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
