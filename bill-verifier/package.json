@@ -1,0 +1,40 @@
+{
+  "name": "electricity-bill-verifier",
+  "version": "1.0.0",
+  "description": "نظام التحقق من فواتير الكهرباء - Electricity Bill Verification System",
+  "author": "Mazin Makhoul",
+  "license": "MIT",
+  "homepage": "https://github.com/mazenmakhoul91-cmd/advance_managemen_nepco",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mazenmakhoul91-cmd/advance_managemen_nepco.git"
+  },
+  "keywords": [
+    "electricity",
+    "bill",
+    "verification",
+    "excel",
+    "ocr",
+    "image-processing",
+    "فاتورة",
+    "كهرباء",
+    "تحقق"
+  ],
+  "technologies": [
+    "HTML5",
+    "CSS3",
+    "JavaScript (Vanilla)",
+    "XLSX.js",
+    "Canvas API"
+  ],
+  "scripts": {
+    "start": "Open index.html in browser",
+    "build": "No build process needed - static files only"
+  },
+  "dependencies": {
+    "xlsx": "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"
+  },
+  "optionalDependencies": {
+    "tesseract.js": "https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"
+  }
+}
